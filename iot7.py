@@ -156,17 +156,17 @@ elif command.upper() == "RFIDREADER":
         #parcel exists
         print("Adding new transfer at location Toulouse")
         newOp = {"date": datetime.datetime.now(), "location": toulouseLocId, "operation": "transfer"}
-        res = db.customers.update_one({"parcels._id": ObjectId(packID)}, {"$push": {"parcels.$.operations": newOp}})
+        res = db.customers.update_one({"parcels._id": packID}, {"$push": {"parcels.$.operations": newOp}})
 
     elif len(parcelDoc) == 0:
         cust = chooseCustomer("This parcel is new. Please select a customer to ship this package:")
         pWt = str(raw_input('Please enter a parcel weight:'))
         boardLoc = db.customers.find_one({"_id": cust}, {"homeLocation": 1, "_id": 0})
         destLoc = chooseLocation('Please enter a destination location from the ID above: ')
-        newOp = {"date": datetime.datetime.now(), "location": boardLoc, "operation": "boarding"}
-        newParcel = {"parcels": [{"_id": packID, 'weight': pWt, 'destLocation': destLoc, 'operations': [newOp]}]}
-        res = db.customers.update_one({"_id": cust}, {"$set": newParcel})
-        
+        newOp = {"date": datetime.datetime.now(), "location": toulouseLocId, "operation": "boarding"}
+        newParcel = {"parcels": {"_id": ObjectId(), 'weight': pWt, 'destLocation': destLoc, 'operations': [newOp]}}
+        res = db.customers.update_one({"_id": cust}, {"$push": newParcel})
+
     else:
         print("Error retrieving packages")
 

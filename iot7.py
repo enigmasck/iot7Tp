@@ -49,6 +49,7 @@ def readRFID():
                 ID = ID + str(read_byte)
     return ID
     """""
+    return '00EBBR0882EE'
 print("List of Commands: GetAllLocations, InsertLocation, InsertCustomer, CreateParcel, ParcelHistory, RfidReader, UpdateParcelStatus")
 command = str(raw_input('Please enter a command:'))
 
@@ -145,24 +146,27 @@ elif command.upper() == "RFIDREADER":
     print("Waiting to Read package ID")
     packID = readRFID()
     print("Successful Package ID Read: ", packID)
-
+    parcelDoc = []
     #check if parcel exists
-    parcel = db.parcels.find_one({"_id":packID})
+    parcel = db.customers.find({"parcels": {"$elemMatch": {"_id": packID}}}, {"parcels": 1, "_id":0});
+    for p in parcel:
+        parcelDoc.append(p)
 
-    if parcel != {}:
+    if len(parcelDoc) > 0:
         #parcel exists
         print("Adding new transfer at location Toulouse")
         newOp = {"date": datetime.datetime.now(), "location": toulouseLocId, "operation": "transfer"}
-        res = db.parcels.update_one({"_id": packID}, {"$push": {"operations": {"$each": [newOp]}}})
+        res = db.customers.update_one({"parcels._id": ObjectId(packID)}, {"$push": {"parcels.$.operations": newOp}})
 
-    elif parcel == {}:
+    elif len(parcelDoc) == 0:
         cust = chooseCustomer("This parcel is new. Please select a customer to ship this package:")
         pWt = str(raw_input('Please enter a parcel weight:'))
-        boardLoc = db.customers.find_one({"_id": cust}, {"homeLocation": 1})
+        boardLoc = db.customers.find_one({"_id": cust}, {"homeLocation": 1, "_id": 0})
         destLoc = chooseLocation('Please enter a destination location from the ID above: ')
         newOp = {"date": datetime.datetime.now(), "location": boardLoc, "operation": "boarding"}
         newParcel = {"parcels": [{"_id": packID, 'weight': pWt, 'destLocation': destLoc, 'operations': [newOp]}]}
         res = db.customers.update_one({"_id": cust}, {"$set": newParcel})
+        
     else:
         print("Error retrieving packages")
 
